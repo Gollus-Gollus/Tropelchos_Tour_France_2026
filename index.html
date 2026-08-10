@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="UTF-8">
+<script>
+/* ── Anti-caché automático ──────────────────────────────────
+   Los metatags <meta http-equiv="Cache-Control"...> no siempre
+   funcionan: la CDN de GitHub Pages (u otros hostings) puede
+   servir una copia guardada sin llegar a mirarlos. Este script
+   comprueba si la página cargada es la última versión (BUILD_ID)
+   y, si no lo es, fuerza una recarga real contra el servidor
+   añadiendo un parámetro nuevo en la URL — eso obliga a saltarse
+   cualquier caché, porque para la caché es "una URL distinta".
+   Se autolimita a 2 intentos para no entrar en bucle. */
+(function(){
+  var BUILD_ID = /*__MARCA_BUILD_INICIO__*/
+"1786398094026"
+/*__MARCA_BUILD_FIN__*/;
+  try{
+    // Solo actuar si esto es una página realmente publicada (http/https
+    // con dominio real). Dentro del panel de previsualización de Claude
+    // (u otros sandboxes: about:, blob:, data:, srcdoc, file:) NO hay
+    // una URL navegable de verdad, así que forzar una recarga ahí
+    // provoca errores (p.ej. 404) en lugar de arreglar nada.
+    var esPaginaReal = /^https?:$/.test(location.protocol) && !!location.hostname;
+    if(esPaginaReal){
+      var params = new URLSearchParams(location.search);
+      var actual = params.get('v');
+      var intentos = parseInt(params.get('_r')||'0', 10);
+      if(actual !== BUILD_ID && intentos < 2){
+        params.set('v', BUILD_ID);
+        params.set('_r', String(intentos+1));
+        location.replace(location.pathname + '?' + params.toString());
+      }
+    }
+  }catch(e){ /* si algo falla, seguimos cargando la página con normalidad */ }
+})();
+</script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -8145,6 +8179,10 @@ function generarHTMLConDatosGrabados(){
   if(r2) html = r2;
   var r3 = _reemplazarEntreMarcas(html, '/*__MARCA_RESULTADOS_INICIO__*/', '/*__MARCA_RESULTADOS_FIN__*/', _serializarResultadosPrecargados());
   if(r3) html = r3;
+  // Nuevo identificador de versión: obliga a saltarse la caché
+  // (del navegador y de la CDN del hosting) en cuanto se publique.
+  var r4 = _reemplazarEntreMarcas(html, '/*__MARCA_BUILD_INICIO__*/', '/*__MARCA_BUILD_FIN__*/', JSON.stringify(String(Date.now())));
+  if(r4) html = r4;
 
   if(!r1 && !r2 && !r3){
     miAlert('No se han encontrado los puntos de guardado en el archivo. Prueba a recargar la página.', '⚠️ Error');
